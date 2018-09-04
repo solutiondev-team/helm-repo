@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ntm-service
+spec:
+  ports:
+    - port: 8080
+      nodePort: 32345 #랜덤으로 부여되는 포트번호보다 차라리 지정하여 사용하면 괜찮을것 같은 포트 번호
+  selector:
+    app: ntm-deployment
+  type: NodePort
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  name: ntm-deployment
+  labels:
+    app: ntm-deployment
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: ntm-deployment
+  template:
+    metadata:
+      labels:
+        app: ntm-deployment
+    spec:
+      volumes:
+        - name: ntmwarvolume
+          hostPath:
+            path: /tmp/ntm
+            type: Directory
+      containers:
+        - name: ntm-deployment
+          image: solutiondevteam/ntm:4.1.2.4
+          env:
+            - name: NTM_DB_URL
+              value: jdbc:postgresql://ntm-db-service:5432/ncp_core_db
+            - name: NTM_DB_USER
+              value: itm_core
+            - name: NTM_DB_PASSWORD
+              value: ~@WSX3edc
+            - name: TZ
+              value: Asia/Seoul
+            - name: JAVA_TOOL_OPTIONS
+              value: -Dfile.encoding=UTF8
+          imagePullPolicy: Always
+          volumeMounts:
+          - name: ntmwarvolume
+            mountPath: /app/ntm/fileupload
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP

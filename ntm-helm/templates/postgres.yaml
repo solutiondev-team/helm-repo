@@ -1,0 +1,58 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: ntm-db-service
+spec:
+  ports:
+    - port: 5432
+      nodePort: 31701 #랜덤으로 부여되는 포트번호보다 차라리 지정하여 사용하면 괜찮을것 같은 포트 번호
+  type: NodePort
+  selector:
+    app: ntm-db-statefulset
+---
+kind: StatefulSet
+apiVersion: apps/v1beta2
+metadata:
+  name: ntm-db-statefulset
+  labels:
+    app: ntm-db-statefulset
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ntm-db-statefulset
+  serviceName: ntm-db-statefulset
+  template:
+    metadata:
+      labels:
+        app: ntm-db-statefulset
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      volumes:
+        - name: ntmdbvolume
+          hostPath:
+            path: /tmp/ntmdata
+            type: Directory
+      containers:
+      - name: ntm-db
+        image: postgres:9.6.9
+        ports:
+          - containerPort: 5432
+            name: postgres
+        volumeMounts:
+        - name: ntmdbvolume
+          mountPath: /var/lib/postgresql/data
+        env:
+          - name : POSTGRES_DB
+            value: ncp_core_db
+          - name : POSTGRES_USER
+            value: itm_core
+          - name : POSTGRES_PASSWORD
+            value: ~@WSX3edc
+          - name : POSTGRES_INITDB_ARGS
+            value: --encoding=UTF-8
+          - name : TZ
+            value: Asia/Seoul
